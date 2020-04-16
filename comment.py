@@ -1,10 +1,12 @@
+#!/usr/bin/python
+# -*- coding: <utf-8> -*-
 import MySQLdb
 import html
 
 from nga import NGA
 
 nga = NGA()
-db = MySQLdb.connect(host="localhost", user="root", passwd="root", db="nga")
+db = MySQLdb.connect(host="localhost", user="root", passwd="liuyuan.", db="nga")
 
 comment_sql = "insert into comments (pid, fid, tid, postdate , content, from_client, lou, postdatetimestamp, comment_to_id, vote_good, vote_bad, authorid, reputation, is_user_quote, isTieTiao) value ('{pid}', '{fid}', '{tid}', '{postdate}', '{content}', '{from_client}', '{lou}', '{postdatetimestamp}', '{comment_to_id}', '{vote_good}', '{vote_bad}', '{authorid}', '{reputation}', '{is_user_quote}', '{isTieTiao}')"
 c = db.cursor()
@@ -25,10 +27,14 @@ if c.execute('select tid, comment_page from subjects where found_news = true') >
             continue
 
         try:
+            new_comments_count = 0;
+
             for page in range(subject[1], (data['totalPage'] + 1)):
                 if page != subject[1]:
                     data = nga.t_content(subject[0], page)
                 comments = data['result']
+
+                if comments is None: break
 
                 for comment in comments:
                     if c.execute(
@@ -47,7 +53,7 @@ if c.execute('select tid, comment_page from subjects where found_news = true') >
                             from_client=comment['from_client'],
                             lou=comment['lou'],
                             postdatetimestamp=comment['postdatetimestamp'],
-                            comment_to_id=comment['comment_to_id'],
+                            comment_to_id=comment['comment_to_id'] if comment['comment_to_id'] else 0,
                             vote_good=comment['vote_good'],
                             vote_bad=comment['vote_bad'],
                             authorid=comment['author']['uid'],
@@ -57,9 +63,13 @@ if c.execute('select tid, comment_page from subjects where found_news = true') >
                         )
 
                         # print('[', c.execute(sql), ']', comment['content'])
-                        c.execute(sql)
+                        new_comments_count += c.execute(sql)
 
                 c.execute('update subjects set comment_page = \'{page}\' where tid = \'{tid}\''.format(page=page, tid=comment['tid']))
+            print('{tid}:\t{new_comments_count}'.format(
+                tid = comment['tid'],
+                new_comments_count = new_comments_count
+            ))
         except KeyError:
             print(comment)
             print(KeyError.with_traceback())
